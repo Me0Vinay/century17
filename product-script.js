@@ -1,4 +1,6 @@
 // ===== PRODUCT DETAIL PAGE SCRIPT =====
+const SCRIPT_VERSION = 'v2.1';
+console.log('Loaded product-script.js', SCRIPT_VERSION);
 let allProducts = [];
 let currentProduct = null;
 let suggestedProducts = [];
