@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel to JSON Converter - Century17Toys</title>
+    <meta name="robots" content="index, follow">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        .required-fields {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+
+        .required-fields h3 {
+            color: #1e40af;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .required-fields ul {
+            padding-left: 20px;
+        }
+
+        .required-fields li {
+            color: #374151;
+            margin-bottom: 5px;
+        }
+
+        .required-fields code {
+            background: #dbeafe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .drop-zone {
+            border: 3px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .drop-zone.dragover {
+            border-color: #667eea;
+            background: #f5f3ff;
+        }
+
+        .drop-zone svg {
+            margin: 0 auto 20px;
+            opacity: 0.5;
+        }
+
+        .drop-zone p {
+            font-size: 1.1rem;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone small {
+            color: #6b7280;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .output {
+            margin-top: 30px;
+        }
+
+        .output h3 {
+            margin-bottom: 15px;
+            color: #1f2937;
+        }
+
+        .output-box {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            color: #065f46;
+        }
+
+        .error {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            color: #991b1b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📊 Excel to JSON Converter</h1>
+        <p class="subtitle">Convert your product catalog to JSON format for Century17Toys website</p>
+
+        <div class="required-fields">
+            <h3>Required Excel Columns (in exact order):</h3>
+            <ul>
+                <li><code>product_id</code> - Unique product identifier</li>
+                <li><code>sub_product_id</code> - Variant identifier (same as product_id if no variants)</li>
+                <li><code>product_name</code> - Product name</li>
+                <li><code>image_link</code> - Full URL to product image</li>
+                <li><code>size</code> - Size (Small, Medium, Large, etc.)</li>
+                <li><code>fabric_type</code> - Fabric description</li>
+                <li><code>category_type</code> - Product category</li>
+                <li><code>price</code> - Price (numbers only, no currency symbol)</li>
+                <li><code>color</code> - Color name</li>
+                <li><code>increment_by</code> - (Optional) How many items to add per click (defaults to 1)</li>
+            </ul>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Drop your Excel/CSV file here</p>
+            <small>or click to browse (Supports .xlsx, .xls, .csv)</small>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+        </div>
+
+        <div id="output" class="output" style="display: none;">
+            <h3>Generated JSON:</h3>
+            <div id="outputBox" class="output-box"></div>
+            <div class="actions">
+                <button class="btn" id="downloadBtn">Download products.json</button>
+                <button class="btn" id="copyBtn">Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const output = document.getElementById('output');
+        const outputBox = document.getElementById('outputBox');
+        const message = document.getElementById('message');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const copyBtn = document.getElementById('copyBtn');
+
+        let jsonData = '';
+
+        // Click to upload
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+
+            message.innerHTML = '';
+
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonArray = XLSX.utils.sheet_to_json(firstSheet);
+
+                    // Validate required fields
+                    const requiredFields = [
+                        'product_id', 'sub_product_id', 'product_name', 'image_link',
+                        'size', 'fabric_type', 'category_type', 'price', 'color'
+                    ];
+
+                    if (jsonArray.length === 0) {
+                        throw new Error('Excel file is empty');
+                    }
+
+                    const firstRow = jsonArray[0];
+                    const missingFields = requiredFields.filter(field => !(field in firstRow));
+
+                    if (missingFields.length > 0) {
+                        throw new Error(`Missing required columns: ${missingFields.join(', ')}`);
+                    }
+
+                    // Format the data
+                    const formattedData = jsonArray.map(row => ({
+                        product_id: String(row.product_id),
+                        sub_product_id: String(row.sub_product_id || row.product_id),
+                        product_name: String(row.product_name),
+                        image_link: String(row.image_link),
+                        size: String(row.size || ''),
+                        fabric_type: String(row.fabric_type || ''),
+                        category_type: String(row.category_type),
+                        price: String(row.price),
+                        color: String(row.color || ''),
+                        increment_by: String(row.increment_by || '1')
+                    }));
+
+                    jsonData = JSON.stringify(formattedData, null, 4);
+                    outputBox.textContent = jsonData;
+                    output.style.display = 'block';
+
+                    message.innerHTML = `
+                        <div class="success">
+                            ✓ Successfully converted ${formattedData.length} products!
+                        </div>
+                    `;
+
+                } catch (error) {
+                    message.innerHTML = `
+                        <div class="error">
+                            ✗ Error: ${error.message}
+                        </div>
+                    `;
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'products.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            message.innerHTML = `
+                <div class="success">
+                    ✓ Downloaded products.json successfully!
+                </div>
+            `;
+        });
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(jsonData).then(() => {
+                message.innerHTML = `
+                    <div class="success">
+                        ✓ Copied to clipboard!
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+
+</html>
