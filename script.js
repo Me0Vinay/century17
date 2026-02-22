@@ -604,8 +604,17 @@ async function submitOrder(event) {
 
 // ===== WHATSAPP =====
 function initWhatsApp() {
+    // Only enable the site-level WhatsApp links on the main page (index).
+    const path = window.location.pathname || '';
+    const isHome = path === '/' || path === '' || path.endsWith('/index.html') || path.endsWith('index.html');
+
     const whatsappFloat = document.getElementById('whatsappFloat');
     const footerWhatsapp = document.getElementById('footerWhatsapp');
+
+    if (!isHome) {
+        if (whatsappFloat) whatsappFloat.style.display = 'none';
+        return;
+    }
 
     if (CONFIG.whatsappNumber) {
         const url = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(CONFIG.whatsappMessage)}`;
