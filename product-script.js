@@ -299,7 +299,7 @@ function renderProductDetail() {
                 <div class="product-description-section">
                     <h3>Product Description</h3>
                     <p class="product-description">
-                        Premium quality ${currentProduct.baseName} made with ${currentProduct.fabric || 'high-quality'} material.
+                        Good quality ${currentProduct.baseName} made with ${currentProduct.fabric || 'high-quality'} material.
                         Perfect for kids and collectors. Available in ${currentProduct.color || 'various'} color${currentProduct.size ? `, size: ${currentProduct.size}` : ''}.
                         This delightful toy is soft, cuddly, and safe for children of all ages.
                     </p>
