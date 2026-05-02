@@ -75,7 +75,7 @@ TOY001     | Teddy Bear      | https://...|https://...  |https://...|https://...
 - Use consistent image dimensions
 - Keep images under 2MB for fast loading
 - Test URLs in browser before adding to Excel
-- **Google Drive Links**: Use the sharing link format and the system will automatically convert them to direct view links
+- **Google Drive Links**: Use sharing links and ensure files are set to "Anyone with the link can view" - the system automatically converts them to viewable thumbnails
 
 ---
 

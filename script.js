@@ -199,11 +199,12 @@ async function fetchFromGoogleSheets() {
 function convertToDirectImageUrl(url) {
     if (!url || typeof url !== 'string') return url;
     
-    // Convert Google Drive sharing links to direct view links
-    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/view/);
+    // Convert Google Drive sharing links to thumbnail API links
+    const driveMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
     if (driveMatch) {
         const fileId = driveMatch[1];
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        // Use thumbnail API for better compatibility
+        return `https://drive.google.com/thumbnail?id=${fileId}&sz=s400`;
     }
     
     // Return original URL if not a Google Drive link
