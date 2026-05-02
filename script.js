@@ -195,6 +195,21 @@ async function fetchFromGoogleSheets() {
     });
 }
 
+// ===== GOOGLE DRIVE LINK CONVERSION =====
+function convertToDirectImageUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    
+    // Convert Google Drive sharing links to direct view links
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/view/);
+    if (driveMatch) {
+        const fileId = driveMatch[1];
+        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    }
+    
+    // Return original URL if not a Google Drive link
+    return url;
+}
+
 // ===== PROCESS PRODUCTS =====
 function processProducts(data) {
     return data.map(item => {
@@ -209,11 +224,11 @@ function processProducts(data) {
             productId: item.product_id,
             name: variantName,
             baseName: item.product_name,
-            image: item.image_link,
-            imageFront: item.image_front || item.image_link,
-            imageTop: item.image_top || item.image_link,
-            imageSide: item.image_side || item.image_link,
-            imageProjection: item.image_projection || item.image_link,
+            image: convertToDirectImageUrl(item.image_link),
+            imageFront: convertToDirectImageUrl(item.image_front || item.image_link),
+            imageTop: convertToDirectImageUrl(item.image_top || item.image_link),
+            imageSide: convertToDirectImageUrl(item.image_side || item.image_link),
+            imageProjection: convertToDirectImageUrl(item.image_projection || item.image_link),
             youtubeVideo: item.youtube_video || "",
             category: item.category_type,
             price: parseFloat(item.price) || 0,
