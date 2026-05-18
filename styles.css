@@ -1273,11 +1273,19 @@ textarea {
     }
     
     .filter-group {
-        min-width: 160px;
+        min-width: 0;
+    }
+
+    .filter-group:nth-child(3) {
+        grid-column: span 2;
     }
 
     .filters-wrapper {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: var(--spacing-md);
+        overflow-x: visible;
+        padding-bottom: 0;
     }
 
     .product-detail-wrapper {
