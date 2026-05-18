@@ -1305,15 +1305,21 @@ textarea {
     }
 
     .product-specs {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        padding: var(--spacing-md);
+        gap: var(--spacing-sm);
+    }
+
+    .spec-value {
+        font-size: var(--font-size-base);
     }
 
     .cart-controls {
-        flex-direction: column;
+        flex-wrap: wrap;
     }
 
     .qty-display-detail {
-        width: 100%;
+        width: auto;
     }
 
     .remove-from-cart-btn {
@@ -1330,7 +1336,7 @@ textarea {
     }
 
     .thumbnail-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(4, 1fr);
     }
 }
 
