@@ -329,11 +329,10 @@ function renderSuggestedProducts() {
         const cartQuantity = cartItem ? cartItem.quantity : 0;
 
         return `
-            <div class="product-card suggestion-card">
+            <div class="product-card suggestion-card" onclick="navigateToProduct('${product.id}')" style="cursor:pointer;">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.name}" loading="lazy" 
-                         onerror="this.src='https://via.placeholder.com/400x400/f0abfc/9333ea?text=${encodeURIComponent(product.name)}'"
-                         onclick="navigateToProduct('${product.id}')">
+                         onerror="this.src='https://via.placeholder.com/400x400/f0abfc/9333ea?text=${encodeURIComponent(product.name)}'">
                     ${product.incrementBy > 1 ? `<div class="moq-badge">MOQ: ${product.incrementBy}</div>` : ''}
                 </div>
                 <div class="product-info">
@@ -343,13 +342,13 @@ function renderSuggestedProducts() {
                     </div>
                     <div class="product-price">₹${product.price.toFixed(2)}</div>
                     ${inCart ? `
-                        <div class="product-qty-controls">
-                            <button class="qty-btn-product" onclick="updateProductQuantity('${product.id}', -1)">−</button>
+                        <div class="product-qty-controls" onclick="event.stopPropagation()">
+                            <button class="qty-btn-product" onclick="event.stopPropagation(); updateProductQuantity('${product.id}', -1)">−</button>
                             <span class="qty-display-product">${cartQuantity}</span>
-                            <button class="qty-btn-product" onclick="updateProductQuantity('${product.id}', 1)">+</button>
+                            <button class="qty-btn-product" onclick="event.stopPropagation(); updateProductQuantity('${product.id}', 1)">+</button>
                         </div>
                     ` : `
-                        <button class="add-to-cart-btn" onclick="addToCart('${product.id}')">
+                        <button class="add-to-cart-btn" onclick="event.stopPropagation(); addToCart('${product.id}')">
                             Add to Cart
                         </button>
                     `}
@@ -401,6 +400,7 @@ function addToCart(productId) {
 
     saveCart();
     renderProductDetail();
+    renderSuggestedProducts(); // update suggestion cards (btn → qty controls)
     showCartAnimation();
 }
 
