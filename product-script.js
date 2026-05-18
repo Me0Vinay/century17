@@ -161,7 +161,7 @@ function renderProductDetail() {
                 <div class="main-image-container">
                     <img id="mainImage" src="${currentProduct.imageFront}" 
                          alt="${currentProduct.name}" 
-                         onerror="this.src='https://via.placeholder.com/600x600/f0abfc/9333ea?text=${encodeURIComponent(currentProduct.name)}'">
+                         onerror="this.src='https://via.placeholder.com/600x600/f5f3ff/8b5cf6?text=${encodeURIComponent(currentProduct.name)}'">
                 </div>
                 
                 <!-- Thumbnail Images -->
@@ -171,7 +171,7 @@ function renderProductDetail() {
                              alt="Front View" 
                              onclick="switchImage('${currentProduct.imageFront}')"
                              title="Front View"
-                             onerror="this.src='https://via.placeholder.com/100x100/f0abfc/9333ea?text=Front'">
+                             onerror="this.src='https://via.placeholder.com/100x100/f5f3ff/8b5cf6?text=Front'">
                         <span class="thumbnail-label">Front</span>
                     </div>
                     <div class="thumbnail-wrapper">
@@ -179,7 +179,7 @@ function renderProductDetail() {
                              alt="Top View" 
                              onclick="switchImage('${currentProduct.imageTop}')"
                              title="Top View"
-                             onerror="this.src='https://via.placeholder.com/100x100/f0abfc/9333ea?text=Top'">
+                             onerror="this.src='https://via.placeholder.com/100x100/f5f3ff/8b5cf6?text=Top'">
                         <span class="thumbnail-label">Top</span>
                     </div>
                     <div class="thumbnail-wrapper">
@@ -187,7 +187,7 @@ function renderProductDetail() {
                              alt="Side View" 
                              onclick="switchImage('${currentProduct.imageSide}')"
                              title="Side View"
-                             onerror="this.src='https://via.placeholder.com/100x100/f0abfc/9333ea?text=Side'">
+                             onerror="this.src='https://via.placeholder.com/100x100/f5f3ff/8b5cf6?text=Side'">
                         <span class="thumbnail-label">Side</span>
                     </div>
                     <div class="thumbnail-wrapper">
@@ -195,7 +195,7 @@ function renderProductDetail() {
                              alt="360 Projection" 
                              onclick="switchImage('${currentProduct.imageProjection}')"
                              title="360 Projection"
-                             onerror="this.src='https://via.placeholder.com/100x100/f0abfc/9333ea?text=360'">
+                             onerror="this.src='https://via.placeholder.com/100x100/f5f3ff/8b5cf6?text=360'">
                         <span class="thumbnail-label">360°</span>
                     </div>
                 </div>
@@ -332,7 +332,7 @@ function renderSuggestedProducts() {
             <div class="product-card suggestion-card" onclick="navigateToProduct('${product.id}')" style="cursor:pointer;">
                 <div class="product-image">
                     <img src="${product.image}" alt="${product.name}" loading="lazy" 
-                         onerror="this.src='https://via.placeholder.com/400x400/f0abfc/9333ea?text=${encodeURIComponent(product.name)}'">
+                         onerror="this.src='https://via.placeholder.com/400x400/f5f3ff/8b5cf6?text=${encodeURIComponent(product.name)}'">
                     ${product.incrementBy > 1 ? `<div class="moq-badge">MOQ: ${product.incrementBy}</div>` : ''}
                 </div>
                 <div class="product-info">
@@ -483,7 +483,7 @@ function updateCartUI() {
         items.innerHTML = cart.map((item, index) => `
             <div class="cart-item">
                 <img src="${item.image}" alt="${item.name}" class="cart-item-image"
-                     onerror="this.src='https://via.placeholder.com/80x80/f0abfc/9333ea?text=Toy'">
+                     onerror="this.src='https://via.placeholder.com/80x80/f5f3ff/8b5cf6?text=Toy'">
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.name}</div>
                     <div class="cart-item-variant">

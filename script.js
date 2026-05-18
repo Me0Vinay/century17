@@ -149,7 +149,7 @@ function renderProducts() {
             <div class="product-image" onclick="navigateToProductDetail('${product.id}')">
                 <img src="${product.image}" alt="${product.name}" loading="lazy" 
                      style="cursor: pointer;"
-                     onerror="this.src='https://via.placeholder.com/400x400/f0abfc/9333ea?text=${encodeURIComponent(product.name)}'">
+                     onerror="this.src='https://via.placeholder.com/400x400/f5f3ff/8b5cf6?text=${encodeURIComponent(product.name)}'">
                 ${incrementBy > 1 ? `<div class="moq-badge">MOQ: ${incrementBy}</div>` : ''}
             </div>
             <div class="product-info">
@@ -336,7 +336,7 @@ function updateCartUI() {
         items.innerHTML = cart.map((item, index) => `
             <div class="cart-item">
                 <img src="${item.image}" alt="${item.name}" class="cart-item-image"
-                     onerror="this.src='https://via.placeholder.com/80x80/f0abfc/9333ea?text=Toy'">
+                     onerror="this.src='https://via.placeholder.com/80x80/f5f3ff/8b5cf6?text=Toy'">
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.name}</div>
                     <div class="cart-item-variant">
