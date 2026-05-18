@@ -56,12 +56,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== LOAD PRODUCTS =====
+const CACHE_KEY = 'century17_data';
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+
 async function loadProducts() {
     try {
-        // Fetch live from Google Sheets (always up-to-date)
-        const response = await fetch(SHEET_CSV_URL);
-        if (!response.ok) throw new Error('Failed to fetch Google Sheet');
-        const csvText = await response.text();
+        let csvText;
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        const cacheTime = sessionStorage.getItem(CACHE_KEY + '_time');
+
+        if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < CACHE_TIME)) {
+            csvText = cached;
+        } else {
+            const response = await fetch(SHEET_CSV_URL);
+            if (!response.ok) throw new Error('Failed to fetch Google Sheet');
+            csvText = await response.text();
+            sessionStorage.setItem(CACHE_KEY, csvText);
+            sessionStorage.setItem(CACHE_KEY + '_time', Date.now().toString());
+        }
+
         const data = parseCSV(csvText);
         products = processProducts(data);
         filteredProducts = [...products];
@@ -211,7 +224,7 @@ function applyFilters() {
         let matchesPrice = true;
         if (priceRange !== 'all') {
             const [min, max] = priceRange.split('-').map(Number);
-            matchesPrice = product.basePrice >= min && product.basePrice <= max;
+            matchesPrice = product.price >= min && product.price <= max;
         }
 
         return matchesSearch && matchesCategory && matchesPrice;
@@ -219,9 +232,9 @@ function applyFilters() {
 
     // Sorting
     if (sort === 'price-low') {
-        filteredProducts.sort((a, b) => a.basePrice - b.basePrice);
+        filteredProducts.sort((a, b) => a.price - b.price);
     } else if (sort === 'price-high') {
-        filteredProducts.sort((a, b) => b.basePrice - a.basePrice);
+        filteredProducts.sort((a, b) => b.price - a.price);
     } else if (sort === 'name') {
         filteredProducts.sort((a, b) => a.name.localeCompare(b.name));
     }

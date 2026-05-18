@@ -67,9 +67,23 @@ async function loadAndDisplayProduct() {
         }
 
         // Load live from Google Sheets
-        const response = await fetch(SHEET_CSV_URL);
-        if (!response.ok) throw new Error('Sheet unavailable');
-        const csvText = await response.text();
+        const CACHE_KEY = 'century17_data';
+        const CACHE_TIME = 5 * 60 * 1000;
+        let csvText;
+        
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        const cacheTime = sessionStorage.getItem(CACHE_KEY + '_time');
+
+        if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < CACHE_TIME)) {
+            csvText = cached;
+        } else {
+            const response = await fetch(SHEET_CSV_URL);
+            if (!response.ok) throw new Error('Sheet unavailable');
+            csvText = await response.text();
+            sessionStorage.setItem(CACHE_KEY, csvText);
+            sessionStorage.setItem(CACHE_KEY + '_time', Date.now().toString());
+        }
+
         const data = parseCSV(csvText);
         allProducts = processProducts(data);
 
