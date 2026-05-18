@@ -149,7 +149,7 @@ function processProducts(data) {
             imageSide: imageSide,
             imageProjection: imageProjection,
             youtubeVideo: item.youtube_video || "",
-            category: item.category_type,
+            category: item.category_type || "Uncategorized",
             price: parseFloat(item.price) || 0,
             size: item.size,
             color: item.color,

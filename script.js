@@ -127,7 +127,7 @@ function processProducts(data) {
             imageSide: imageSide,
             imageProjection: imageProjection,
             youtubeVideo: item.youtube_video || "",
-            category: item.category_type,
+            category: item.category_type || "Uncategorized",
             price: parseFloat(item.price) || 0,
             size: item.size,
             color: item.color,
@@ -213,12 +213,16 @@ function applyFilters() {
     const sort = document.getElementById('sortFilter').value;
 
     filteredProducts = products.filter(product => {
+        // Safe string for category
+        const safeCategory = product.category || "";
+        const safeName = product.name || "";
+
         // Search filter
-        const matchesSearch = product.name.toLowerCase().includes(search) ||
-            product.category.toLowerCase().includes(search);
+        const matchesSearch = safeName.toLowerCase().includes(search) ||
+            safeCategory.toLowerCase().includes(search);
 
         // Category filter
-        const matchesCategory = category === 'all' || product.category === category;
+        const matchesCategory = category === 'all' || safeCategory === category;
 
         // Price filter
         let matchesPrice = true;
