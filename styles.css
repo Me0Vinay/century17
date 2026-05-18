@@ -109,6 +109,7 @@ textarea {
     top: 0;
     z-index: 100;
     padding: var(--spacing-md) 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .header-content {
@@ -222,6 +223,7 @@ textarea {
     top: 68px;
     /* Adjusted for header height */
     z-index: 90;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .filters-wrapper {

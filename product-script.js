@@ -596,6 +596,22 @@ async function submitOrder(event) {
 
 // ===== EVENT LISTENERS =====
 function initializeEventListeners() {
+    // Scroll animation for header
+    let lastScrollY = window.scrollY;
+    window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        const header = document.querySelector('.header');
+        
+        if (currentScrollY > lastScrollY && currentScrollY > 100) {
+            // Scrolling down
+            if (header) header.style.transform = 'translateY(-100%)';
+        } else {
+            // Scrolling up
+            if (header) header.style.transform = 'translateY(0)';
+        }
+        lastScrollY = currentScrollY;
+    });
+
     // Search (redirects to home page with search term)
     document.getElementById('searchInput').addEventListener('input', (e) => {
         const term = e.target.value.trim();

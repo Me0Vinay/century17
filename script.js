@@ -455,6 +455,25 @@ async function submitOrder(event) {
 
 // ===== EVENT LISTENERS =====
 function initializeEventListeners() {
+    // Scroll animation for header and filters
+    let lastScrollY = window.scrollY;
+    window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        const header = document.querySelector('.header');
+        const filters = document.querySelector('.filters-section');
+        
+        if (currentScrollY > lastScrollY && currentScrollY > 100) {
+            // Scrolling down
+            if (header) header.style.transform = 'translateY(-100%)';
+            if (filters) filters.style.transform = 'translateY(calc(-100% - 100px))';
+        } else {
+            // Scrolling up
+            if (header) header.style.transform = 'translateY(0)';
+            if (filters) filters.style.transform = 'translateY(0)';
+        }
+        lastScrollY = currentScrollY;
+    });
+
     // Search
     document.getElementById('searchInput').addEventListener('input', applyFilters);
 
