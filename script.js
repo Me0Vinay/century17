@@ -1,51 +1,10 @@
 // ===== STATE MANAGEMENT =====
+// Shared helpers (config, convertDriveLink, parseCSV, processProducts,
+// showCartAnimation, formatPrice, shuffle, cache constants) live in common.js,
+// which is loaded before this file.
 let products = [];
 let filteredProducts = [];
 let cart = [];
-
-// ===== GOOGLE SHEET CONFIG =====
-const SHEET_ID = '17d5ZsULSFn9J-xxkMcVxwSseVdZ6q8ENE58S9wV-xKo';
-const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-
-// Convert Google Drive "view" link to direct image URL
-function convertDriveLink(url) {
-    if (!url) return '';
-    // Match Google Drive file view links
-    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (match) {
-        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-    }
-    return url;
-}
-
-// Parse CSV text into array of objects
-function parseCSV(text) {
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-        const values = [];
-        let cur = '';
-        let inQuotes = false;
-        for (let c = 0; c < lines[i].length; c++) {
-            const ch = lines[i][c];
-            if (ch === '"') {
-                inQuotes = !inQuotes;
-            } else if (ch === ',' && !inQuotes) {
-                values.push(cur.trim());
-                cur = '';
-            } else {
-                cur += ch;
-            }
-        }
-        values.push(cur.trim());
-        const obj = {};
-        headers.forEach((h, idx) => { obj[h] = values[idx] || ''; });
-        rows.push(obj);
-    }
-    return rows;
-}
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -56,35 +15,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== LOAD PRODUCTS =====
-const CACHE_KEY = 'century17_data';
-const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
-
+// Live: pulls the catalog straight from the Google Sheet (gviz) so editing the
+// sheet updates the published site automatically. Falls back to the bundled
+// products.json if the sheet can't be reached. getSheetCSV() is in common.js.
 async function loadProducts() {
     try {
-        let csvText;
-        const cached = sessionStorage.getItem(CACHE_KEY);
-        const cacheTime = sessionStorage.getItem(CACHE_KEY + '_time');
-
-        if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < CACHE_TIME)) {
-            csvText = cached;
-        } else {
-            const response = await fetch(SHEET_CSV_URL);
-            if (!response.ok) throw new Error('Failed to fetch Google Sheet');
-            csvText = await response.text();
-            sessionStorage.setItem(CACHE_KEY, csvText);
-            sessionStorage.setItem(CACHE_KEY + '_time', Date.now().toString());
-        }
-
-        const data = parseCSV(csvText);
+        const data = parseCSV(await getSheetCSV());
         products = processProducts(data);
         filteredProducts = [...products];
         renderProducts();
         populateCategoryFilter();
     } catch (error) {
-        console.error('Error loading products from Google Sheets:', error);
-        // Fallback to local products.json if Sheet is unavailable
+        console.error('Live sheet unavailable, using bundled products.json:', error);
         try {
-            const fallback = await fetch('products.json');
+            const fallback = await fetch('products.json', { cache: 'no-cache' });
             const data = await fallback.json();
             products = processProducts(data);
             filteredProducts = [...products];
@@ -95,46 +39,6 @@ async function loadProducts() {
                 '<div class="loading">Error loading products. Please try again later.</div>';
         }
     }
-}
-
-// Process products to group variants
-// Process products - each variant is a separate listing
-function processProducts(data) {
-    return data.map(item => {
-        const incrementBy = parseInt(item.increment_by) || 1;
-
-        // Build variant description for name
-        const variantParts = [item.size, item.color, item.fabric_type].filter(Boolean);
-        const variantName = variantParts.length > 0
-            ? `${item.product_name} - ${variantParts.join(' ')}`
-            : item.product_name;
-
-        // Convert any Google Drive view links to direct image URLs
-        const imageLink = convertDriveLink(item.image_link);
-        const imageFront = convertDriveLink(item.image_front || item.image_link);
-        const imageTop = convertDriveLink(item.image_top || item.image_link);
-        const imageSide = convertDriveLink(item.image_side || item.image_link);
-        const imageProjection = convertDriveLink(item.image_projection || item.image_link);
-
-        return {
-            id: item.sub_product_id || item.product_id,
-            productId: item.product_id,
-            name: variantName,
-            baseName: item.product_name,
-            image: imageLink,
-            imageFront: imageFront,
-            imageTop: imageTop,
-            imageSide: imageSide,
-            imageProjection: imageProjection,
-            youtubeVideo: item.youtube_video || "",
-            category: item.category_type || "Uncategorized",
-            price: parseFloat(item.price) || 0,
-            size: item.size,
-            color: item.color,
-            fabric: item.fabric_type,
-            incrementBy: incrementBy
-        };
-    });
 }
 
 // ===== RENDER PRODUCTS =====
@@ -187,12 +91,6 @@ function renderProducts() {
     `}).join('');
 }
 
-// Variants are now separate listings, so this function is no longer needed
-function renderVariants(product) {
-    return ''; // Each variant is its own product now
-}
-
-
 // ===== FILTERS =====
 function populateCategoryFilter() {
     const categories = [...new Set(products.map(p => p.category))];
@@ -206,7 +104,29 @@ function populateCategoryFilter() {
     });
 }
 
+// Secret command: typing this in the search box force-refreshes the catalog
+// straight from the live Google Sheet (clears the cache, re-pulls, re-renders).
+// NOTE: GitHub Pages has no backend, so this cannot rewrite/commit the
+// products.json file — but because the store reads the sheet live, this gives
+// you the same effect: the newest sheet data, on demand, right now.
+const REFRESH_COMMAND = 'refreshmerightnow';
+
+async function forceRefresh() {
+    const grid = document.getElementById('productsGrid');
+    document.getElementById('searchInput').value = '';
+    sessionStorage.removeItem(CACHE_KEY);
+    sessionStorage.removeItem(CACHE_KEY + '_time');
+    if (grid) grid.innerHTML = '<div class="loading">🔄 Refreshing catalog from the live sheet…</div>';
+    await loadProducts(); // cache cleared, so this re-pulls fresh data
+}
+
 function applyFilters() {
+    // Intercept the secret refresh command before normal filtering.
+    if (document.getElementById('searchInput').value.trim().toLowerCase() === REFRESH_COMMAND) {
+        forceRefresh();
+        return;
+    }
+
     const search = document.getElementById('searchInput').value.toLowerCase();
     const category = document.getElementById('categoryFilter').value;
     const priceRange = document.getElementById('priceFilter').value;
@@ -373,14 +293,6 @@ function updateCartUI() {
     }
 }
 
-function showCartAnimation() {
-    const cartBtn = document.getElementById('cartBtn');
-    cartBtn.style.transform = 'scale(1.2)';
-    setTimeout(() => {
-        cartBtn.style.transform = 'scale(1)';
-    }, 200);
-}
-
 // ===== CHECKOUT =====
 function openCheckout() {
     const modal = document.getElementById('checkoutModal');
@@ -514,11 +426,6 @@ function initializeEventListeners() {
 function closeCart() {
     document.getElementById('cartSidebar').classList.remove('active');
     document.getElementById('overlay').classList.remove('active');
-}
-
-// ===== UTILITY FUNCTIONS =====
-function formatPrice(price) {
-    return `₹${parseFloat(price).toFixed(2)}`;
 }
 
 // ===== PRODUCT NAVIGATION =====

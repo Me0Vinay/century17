@@ -184,21 +184,32 @@
         <p class="subtitle">Convert your product catalog to JSON format for Century17Toys website</p>
 
         <div class="required-fields">
-            <h3>Required Excel Columns (in exact order):</h3>
+            <h3>Recognised columns:</h3>
             <ul>
                 <li><code>product_id</code> - Unique product identifier</li>
                 <li><code>sub_product_id</code> - Variant identifier (same as product_id if no variants)</li>
                 <li><code>product_name</code> - Product name</li>
-                <li><code>image_link</code> - Full URL to product image</li>
-                <li><code>size</code> - Size (Small, Medium, Large, etc.)</li>
-                <li><code>fabric_type</code> - Fabric description</li>
+                <li><code>image_link</code> - Main product image (URL or Google Drive link)</li>
+                <li><code>image_front</code>, <code>image_top</code>, <code>image_side</code>, <code>image_projection</code> - (Optional) extra views; blank ones fall back to <code>image_link</code></li>
+                <li><code>youtube_video</code> - (Optional) embedded video URL</li>
+                <li><code>size</code>, <code>fabric_type</code>, <code>color</code> - Variant details</li>
                 <li><code>category_type</code> - Product category</li>
                 <li><code>price</code> - Price (numbers only, no currency symbol)</li>
-                <li><code>color</code> - Color name</li>
-                <li><code>increment_by</code> - (Optional) How many items to add per click (defaults to 1)</li>
+                <li><code>increment_by</code> - (Optional) quantity added per click / MOQ (defaults to 1)</li>
             </ul>
         </div>
 
+        <div class="required-fields" style="background:#f5f3ff;border-left-color:#8b5cf6">
+            <h3 style="color:#6d28d9">⚡ Option 1 — Refresh live from the Google Sheet</h3>
+            <p style="color:#374151;margin-bottom:12px">Type the command below to pull the latest catalog straight from your Google Sheet — no file needed.</p>
+            <input type="text" id="commandInput" placeholder="Type the refresh command and press Enter…"
+                   autocomplete="off"
+                   style="width:100%;padding:12px 14px;border:2px solid #d1d5db;border-radius:8px;font-size:1rem;font-family:'Courier New',monospace">
+        </div>
+
+        <p style="text-align:center;color:#6b7280;margin-bottom:20px;font-weight:600">— or —</p>
+
+        <h3 style="margin-bottom:12px;color:#1f2937">Option 2 — Upload an Excel/CSV file</h3>
         <div class="drop-zone" id="dropZone">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -223,6 +234,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="common.js"></script>
     <script>
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -231,8 +243,74 @@
         const message = document.getElementById('message');
         const downloadBtn = document.getElementById('downloadBtn');
         const copyBtn = document.getElementById('copyBtn');
+        const commandInput = document.getElementById('commandInput');
 
+        const REFRESH_COMMAND = 'refreshmerightnow';
         let jsonData = '';
+
+        // Normalize one row (from Excel or the live sheet) into the exact shape
+        // products.json needs. Keeps every column the storefront uses, including
+        // the extra image views and the video — these were dropped before.
+        function formatRows(rows) {
+            return rows.map(row => ({
+                product_id: String(row.product_id || ''),
+                sub_product_id: String(row.sub_product_id || row.product_id || ''),
+                product_name: String(row.product_name || ''),
+                image_link: String(row.image_link || ''),
+                image_front: String(row.image_front || ''),
+                image_top: String(row.image_top || ''),
+                image_side: String(row.image_side || ''),
+                image_projection: String(row.image_projection || ''),
+                youtube_video: String(row.youtube_video || ''),
+                size: String(row.size || ''),
+                fabric_type: String(row.fabric_type || ''),
+                category_type: String(row.category_type || ''),
+                price: String(row.price || ''),
+                color: String(row.color || ''),
+                increment_by: String(row.increment_by || '1')
+            }));
+        }
+
+        function publishJson(formatted, sourceLabel) {
+            jsonData = JSON.stringify(formatted, null, 4);
+            outputBox.textContent = jsonData;
+            output.style.display = 'block';
+            message.innerHTML = `
+                <div class="success">
+                    ✓ ${formatted.length} products ready ${sourceLabel}.
+                    Click <strong>Download products.json</strong>, then replace the
+                    products.json file in your website folder.
+                </div>`;
+        }
+
+        // ===== Option 1: pull live from the Google Sheet on the secret command =====
+        async function refreshFromGoogleSheet() {
+            message.innerHTML = '<div class="success">⏳ Pulling the latest catalog from your Google Sheet…</div>';
+            try {
+                const url = SHEET_CSV_URL + '&cb=' + Date.now(); // bust caches for freshest data
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error('Could not reach the Google Sheet (HTTP ' + res.status + '). Make sure it is shared "Anyone with the link".');
+                const csv = await res.text();
+                const rows = parseCSV(csv); // shared parser from common.js
+                if (rows.length === 0) throw new Error('The sheet returned no rows.');
+                publishJson(formatRows(rows), 'live from the Google Sheet');
+            } catch (err) {
+                let hint = err.message;
+                if (/failed to fetch/i.test(err.message)) {
+                    hint = 'Failed to fetch. Two common causes: ' +
+                        '(1) you opened this file by double-clicking it — open it through your local server instead, e.g. http://localhost:8000/excel-to-json.html; ' +
+                        '(2) the Google Sheet is not shared as "Anyone with the link can view".';
+                }
+                message.innerHTML = `<div class="error">✗ ${hint}</div>`;
+            }
+        }
+
+        commandInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && commandInput.value.trim().toLowerCase() === REFRESH_COMMAND) {
+                commandInput.value = '';
+                refreshFromGoogleSheet();
+            }
+        });
 
         // Click to upload
         dropZone.addEventListener('click', () => fileInput.click());
@@ -273,8 +351,7 @@
 
                     // Validate required fields
                     const requiredFields = [
-                        'product_id', 'sub_product_id', 'product_name', 'image_link',
-                        'size', 'fabric_type', 'category_type', 'price', 'color'
+                        'product_id', 'product_name', 'image_link', 'category_type', 'price'
                     ];
 
                     if (jsonArray.length === 0) {
@@ -288,29 +365,7 @@
                         throw new Error(`Missing required columns: ${missingFields.join(', ')}`);
                     }
 
-                    // Format the data
-                    const formattedData = jsonArray.map(row => ({
-                        product_id: String(row.product_id),
-                        sub_product_id: String(row.sub_product_id || row.product_id),
-                        product_name: String(row.product_name),
-                        image_link: String(row.image_link),
-                        size: String(row.size || ''),
-                        fabric_type: String(row.fabric_type || ''),
-                        category_type: String(row.category_type),
-                        price: String(row.price),
-                        color: String(row.color || ''),
-                        increment_by: String(row.increment_by || '1')
-                    }));
-
-                    jsonData = JSON.stringify(formattedData, null, 4);
-                    outputBox.textContent = jsonData;
-                    output.style.display = 'block';
-
-                    message.innerHTML = `
-                        <div class="success">
-                            ✓ Successfully converted ${formattedData.length} products!
-                        </div>
-                    `;
+                    publishJson(formatRows(jsonArray), 'from the uploaded file');
 
                 } catch (error) {
                     message.innerHTML = `

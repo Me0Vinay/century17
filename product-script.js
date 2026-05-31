@@ -1,53 +1,13 @@
 // ===== PRODUCT DETAIL PAGE SCRIPT =====
+// Shared helpers (config, convertDriveLink, parseCSV, processProducts,
+// showCartAnimation, shuffle, cache constants) live in common.js,
+// which is loaded before this file.
 let allProducts = [];
 let currentProduct = null;
 let suggestedProducts = [];
 let cart = [];
 
-// ===== GOOGLE SHEET CONFIG =====
-const SHEET_ID = '17d5ZsULSFn9J-xxkMcVxwSseVdZ6q8ENE58S9wV-xKo';
-const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-
-// Convert Google Drive "view" link to direct image URL
-function convertDriveLink(url) {
-    if (!url) return '';
-    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (match) {
-        return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-    }
-    return url;
-}
-
-// Parse CSV text into array of objects
-function parseCSV(text) {
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-        const values = [];
-        let cur = '';
-        let inQuotes = false;
-        for (let c = 0; c < lines[i].length; c++) {
-            const ch = lines[i][c];
-            if (ch === '"') {
-                inQuotes = !inQuotes;
-            } else if (ch === ',' && !inQuotes) {
-                values.push(cur.trim());
-                cur = '';
-            } else {
-                cur += ch;
-            }
-        }
-        values.push(cur.trim());
-        const obj = {};
-        headers.forEach((h, idx) => { obj[h] = values[idx] || ''; });
-        rows.push(obj);
-    }
-    return rows;
-}
-
-// ===== INITIALIZATION ===== 
+// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     loadCart();
     loadAndDisplayProduct();
@@ -55,108 +15,44 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== LOAD AND DISPLAY SINGLE PRODUCT =====
+// Live: pulls from the Google Sheet (gviz) with a products.json fallback.
 async function loadAndDisplayProduct() {
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
+    const container = document.getElementById('productDetailContainer');
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
 
-        if (!productId) {
-            document.getElementById('productDetailContainer').innerHTML =
-                '<div class="loading">Product not found. Please go back and select a product.</div>';
-            return;
-        }
+    if (!productId) {
+        container.innerHTML =
+            '<div class="loading">No product selected. <a href="index.html">Back to all toys</a></div>';
+        return;
+    }
 
-        // Load live from Google Sheets
-        const CACHE_KEY = 'century17_data';
-        const CACHE_TIME = 5 * 60 * 1000;
-        let csvText;
-        
-        const cached = sessionStorage.getItem(CACHE_KEY);
-        const cacheTime = sessionStorage.getItem(CACHE_KEY + '_time');
-
-        if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < CACHE_TIME)) {
-            csvText = cached;
-        } else {
-            const response = await fetch(SHEET_CSV_URL);
-            if (!response.ok) throw new Error('Sheet unavailable');
-            csvText = await response.text();
-            sessionStorage.setItem(CACHE_KEY, csvText);
-            sessionStorage.setItem(CACHE_KEY + '_time', Date.now().toString());
-        }
-
-        const data = parseCSV(csvText);
-        allProducts = processProducts(data);
-
-        // Find the product by ID
+    const showProductOrNotFound = () => {
         currentProduct = allProducts.find(p => p.id === productId);
-
         if (!currentProduct) {
-            document.getElementById('productDetailContainer').innerHTML =
-                `<div class="loading">Product "${productId}" not found.</div>`;
-            return;
+            container.innerHTML =
+                `<div class="loading">Product "${productId}" not found. <a href="index.html">Back to all toys</a></div>`;
+            return false;
         }
-
         renderProductDetail();
         loadSuggestedProducts();
+        return true;
+    };
+
+    try {
+        allProducts = processProducts(parseCSV(await getSheetCSV()));
+        showProductOrNotFound();
     } catch (error) {
-        console.error('Error loading product:', error);
-        // Fallback to local products.json
+        console.error('Live sheet unavailable, using bundled products.json:', error);
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const productId = urlParams.get('id');
-            const fallback = await fetch('products.json');
-            const data = await fallback.json();
-            allProducts = processProducts(data);
-            currentProduct = allProducts.find(p => p.id === productId);
-            if (currentProduct) {
-                renderProductDetail();
-                loadSuggestedProducts();
-            } else {
-                document.getElementById('productDetailContainer').innerHTML =
-                    '<div class="loading">Product not found.</div>';
-            }
+            const fallback = await fetch('products.json', { cache: 'no-cache' });
+            allProducts = processProducts(await fallback.json());
+            showProductOrNotFound();
         } catch (e) {
-            document.getElementById('productDetailContainer').innerHTML =
-                '<div class="loading">Error loading product details.</div>';
+            container.innerHTML =
+                '<div class="loading">Error loading product details. Please try again later.</div>';
         }
     }
-}
-
-// Process products (same as main script)
-function processProducts(data) {
-    return data.map(item => {
-        const incrementBy = parseInt(item.increment_by) || 1;
-        const variantParts = [item.size, item.color, item.fabric_type].filter(Boolean);
-        const variantName = variantParts.length > 0
-            ? `${item.product_name} - ${variantParts.join(' ')}`
-            : item.product_name;
-
-        // Convert Google Drive view links to direct image URLs
-        const imageLink = convertDriveLink(item.image_link);
-        const imageFront = convertDriveLink(item.image_front || item.image_link);
-        const imageTop = convertDriveLink(item.image_top || item.image_link);
-        const imageSide = convertDriveLink(item.image_side || item.image_link);
-        const imageProjection = convertDriveLink(item.image_projection || item.image_link);
-
-        return {
-            id: item.sub_product_id || item.product_id,
-            productId: item.product_id,
-            name: variantName,
-            baseName: item.product_name,
-            image: imageLink,
-            imageFront: imageFront,
-            imageTop: imageTop,
-            imageSide: imageSide,
-            imageProjection: imageProjection,
-            youtubeVideo: item.youtube_video || "",
-            category: item.category_type || "Uncategorized",
-            price: parseFloat(item.price) || 0,
-            size: item.size,
-            color: item.color,
-            fabric: item.fabric_type,
-            incrementBy: incrementBy
-        };
-    });
 }
 
 // ===== RENDER PRODUCT DETAIL =====
@@ -456,6 +352,22 @@ function updateProductQuantityDetail(productId, delta) {
     }
 }
 
+// Cart sidebar +/- buttons (used by updateCartUI on this page).
+function updateCartQuantity(index, delta) {
+    if (cart[index]) {
+        const incrementBy = cart[index].incrementBy || 1;
+        const change = delta > 0 ? incrementBy : -incrementBy;
+        cart[index].quantity += change;
+        if (cart[index].quantity <= 0) {
+            cart.splice(index, 1);
+        }
+        saveCart();
+        // Keep the detail view and suggestions in sync with the cart.
+        if (currentProduct) renderProductDetail();
+        renderSuggestedProducts();
+    }
+}
+
 function removeFromCart(index) {
     cart.splice(index, 1);
     saveCart();
@@ -515,14 +427,6 @@ function updateCartUI() {
         `).join('');
         checkoutBtn.disabled = false;
     }
-}
-
-function showCartAnimation() {
-    const cartBtn = document.getElementById('cartBtn');
-    cartBtn.style.transform = 'scale(1.2)';
-    setTimeout(() => {
-        cartBtn.style.transform = 'scale(1)';
-    }, 200);
 }
 
 // ===== CHECKOUT =====
@@ -612,11 +516,15 @@ function initializeEventListeners() {
         lastScrollY = currentScrollY;
     });
 
-    // Search (redirects to home page with search term)
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        const term = e.target.value.trim();
-        if (term) {
-            window.location.href = `index.html?search=${encodeURIComponent(term)}`;
+    // Search: go to the home page with the term only when the user presses
+    // Enter (the old code redirected on every keystroke, so you could never
+    // type a full word from a product page).
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const term = e.target.value.trim();
+            if (term) {
+                window.location.href = `index.html?search=${encodeURIComponent(term)}`;
+            }
         }
     });
 
@@ -654,12 +562,3 @@ function closeCart() {
     document.getElementById('overlay').classList.remove('active');
 }
 
-// ===== UTILITY FUNCTIONS =====
-function shuffle(array) {
-    const arr = [...array];
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-}
