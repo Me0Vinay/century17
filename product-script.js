@@ -6,12 +6,16 @@ let allProducts = [];
 let currentProduct = null;
 let suggestedProducts = [];
 let cart = [];
+// Live min-billing + discount settings (defaults from config.js until the
+// fetch resolves). Helpers live in common.js.
+let storeSettings = defaultSettings();
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     loadCart();
     loadAndDisplayProduct();
     initializeEventListeners();
+    loadStoreSettings().then(s => { storeSettings = s; updateCartUI(); });
 });
 
 // ===== LOAD AND DISPLAY SINGLE PRODUCT =====
@@ -388,9 +392,22 @@ function updateCartUI() {
 
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const disc = computeDiscount(totalPrice, storeSettings);
 
     count.textContent = totalItems;
-    total.textContent = `₹${totalPrice.toFixed(2)}`;
+    // Footer "Total" shows the payable amount (after any tier discount).
+    total.textContent = formatINR(disc.total);
+
+    // Min-billing + discount breakdown, injected once into the cart footer.
+    const footer = document.querySelector('.cart-footer');
+    let note = document.getElementById('cartSummaryNote');
+    if (footer && !note) {
+        note = document.createElement('div');
+        note.id = 'cartSummaryNote';
+        note.className = 'cart-summary-note';
+        footer.insertBefore(note, footer.firstChild);
+    }
+    if (note) note.innerHTML = cart.length ? cartSummaryNoteHTML(totalPrice, storeSettings) : '';
 
     if (cart.length === 0) {
         items.innerHTML = `
@@ -437,14 +454,29 @@ function openCheckout() {
 
     const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    summaryItems.innerHTML = cart.map(item => `
+    // Block checkout when the cart is below the minimum billing value.
+    if (!meetsMinBilling(totalPrice, storeSettings)) {
+        showBillingPopup(totalPrice, storeSettings);
+        return;
+    }
+
+    const disc = computeDiscount(totalPrice, storeSettings);
+
+    let summaryHTML = cart.map(item => `
         <div class="summary-item">
             <span>${item.name} × ${item.quantity}</span>
             <span>₹${(item.price * item.quantity).toFixed(2)}</span>
         </div>
     `).join('');
 
-    checkoutTotal.textContent = `₹${totalPrice.toFixed(2)}`;
+    if (disc.amount > 0) {
+        summaryHTML += `
+        <div class="summary-item"><span>Subtotal</span><span>${formatINR(totalPrice)}</span></div>
+        <div class="summary-item summary-discount"><span>Discount (${disc.percent}%)</span><span>−${formatINR(disc.amount)}</span></div>`;
+    }
+
+    summaryItems.innerHTML = summaryHTML;
+    checkoutTotal.textContent = formatINR(disc.total);
 
     modal.classList.add('active');
     closeCart();
@@ -457,12 +489,24 @@ async function submitOrder(event) {
     const mobile = document.getElementById('customerMobile').value;
     const address = document.getElementById('customerAddress').value;
 
+    const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Safety net: never let an under-minimum order through.
+    if (!meetsMinBilling(totalPrice, storeSettings)) {
+        document.getElementById('checkoutModal').classList.remove('active');
+        showBillingPopup(totalPrice, storeSettings);
+        return;
+    }
+
+    const disc = computeDiscount(totalPrice, storeSettings);
+
     const orderDetails = cart.map(item =>
         `${item.name} (${[item.size, item.color].filter(Boolean).join(', ')}) × ${item.quantity} = ₹${(item.price * item.quantity).toFixed(2)}`
     ).join('\n');
 
-    const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const productDetails = `${orderDetails}\n\nTotal: ₹${totalPrice.toFixed(2)}`;
+    let productDetails = `${orderDetails}\n\nSubtotal: ${formatINR(totalPrice)}`;
+    if (disc.amount > 0) productDetails += `\nDiscount (${disc.percent}%): -${formatINR(disc.amount)}`;
+    productDetails += `\nTotal: ${formatINR(disc.total)}`;
 
     if (CONFIG.enableGoogleSheets) {
         try {
@@ -522,6 +566,12 @@ function initializeEventListeners() {
     document.getElementById('searchInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             const term = e.target.value.trim();
+            // Admin command opens the settings panel right here.
+            if (term.toLowerCase() === ((typeof CONFIG !== 'undefined' && CONFIG.adminCommand) || 'update_value')) {
+                e.target.value = '';
+                requestAdminAccess();
+                return;
+            }
             if (term) {
                 window.location.href = `index.html?search=${encodeURIComponent(term)}`;
             }
